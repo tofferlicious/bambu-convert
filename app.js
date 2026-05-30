@@ -116,6 +116,62 @@ document.addEventListener('DOMContentLoaded', () => {
                 content = content.replace(/generator="BambuStudio [^"]*"/g, 'generator="PrusaSlicer 2.7.0"');
                 content = content.replace(/generator="OrcaSlicer [^"]*"/g, 'generator="PrusaSlicer 2.7.0"');
 
+                // If it's a JSON file (e.g. .config), we might need to fix specific properties
+                if (content.trim().startsWith('{')) {
+                    try {
+                        let json = JSON.parse(content);
+                        let jsonModified = false;
+
+                        // Fix "enable_overhang_speed"
+                        if (json.enable_overhang_speed) {
+                            if (Array.isArray(json.enable_overhang_speed)) {
+                                const original = JSON.stringify(json.enable_overhang_speed);
+                                json.enable_overhang_speed = json.enable_overhang_speed.map(() => "0");
+                                if (JSON.stringify(json.enable_overhang_speed) !== original) jsonModified = true;
+                            } else if (json.enable_overhang_speed !== "0") {
+                                json.enable_overhang_speed = "0";
+                                jsonModified = true;
+                            }
+                        }
+
+                        // Fix "ensure_vertical_shell_thickness"
+                        if (json.ensure_vertical_shell_thickness === "enabled") {
+                            json.ensure_vertical_shell_thickness = "ensure_all";
+                            jsonModified = true;
+                        }
+
+                        // Fix "nozzle_type"
+                        if (json.nozzle_type) {
+                            if (Array.isArray(json.nozzle_type)) {
+                                const original = JSON.stringify(json.nozzle_type);
+                                json.nozzle_type = json.nozzle_type.map(t => t === "hardened_steel" ? "undefine" : t);
+                                if (JSON.stringify(json.nozzle_type) !== original) jsonModified = true;
+                            } else if (json.nozzle_type === "hardened_steel") {
+                                json.nozzle_type = "undefine";
+                                jsonModified = true;
+                            }
+                        }
+
+                        // Fix "raft_first_layer_expansion"
+                        if (json.raft_first_layer_expansion && parseInt(json.raft_first_layer_expansion) < 0) {
+                            json.raft_first_layer_expansion = "0";
+                            jsonModified = true;
+                        }
+
+                        // Fix "tree_support_wall_count"
+                        if (json.tree_support_wall_count && parseInt(json.tree_support_wall_count) < 0) {
+                            json.tree_support_wall_count = "0";
+                            jsonModified = true;
+                        }
+
+                        if (jsonModified) {
+                            content = JSON.stringify(json, null, 4);
+                        }
+                    } catch (e) {
+                        console.error("Failed to parse JSON config:", relativePath, e);
+                    }
+                }
+
                 // Clean up any empty lines created by regex replacements
                 content = content.replace(/^\s*$[\r\n]*/gm, '');
 
