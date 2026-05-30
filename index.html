@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3MF Converter for Anycubic Slicer</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- JSZip for processing zip/3mf files -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <!-- FileSaver for triggering download -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>3MF Converter</h1>
+        <p>Convert Makerworld/Bambu Studio .3mf files to work in Anycubic Next Slicer.</p>
+
+        <div id="drop-zone" class="drop-zone">
+            <p>Drag & Drop your .3mf file here</p>
+            <p>or</p>
+            <input type="file" id="file-input" accept=".3mf">
+        </div>
+
+        <div id="status" class="status hidden">
+            <p id="status-message">Ready</p>
+        </div>
+
+        <button id="convert-btn" disabled>Convert and Download</button>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
