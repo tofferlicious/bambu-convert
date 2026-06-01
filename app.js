@@ -139,61 +139,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 content = content.replace(/generator="BambuStudio [^"]*"/g, 'generator="PrusaSlicer 2.7.0"');
                 content = content.replace(/generator="OrcaSlicer [^"]*"/g, 'generator="PrusaSlicer 2.7.0"');
 
-                // If it's a JSON file (e.g. .config), we might need to fix specific properties
-                if (content.trim().startsWith('{')) {
-                    try {
-                        let json = JSON.parse(content);
-                        let jsonModified = false;
+                // Replace incompatible values using robust string replacement to catch them inside
+                // both JSON configs and XML files without depending on exact nesting structures.
 
-                        // Fix "enable_overhang_speed"
-                        if (json.enable_overhang_speed) {
-                            if (Array.isArray(json.enable_overhang_speed)) {
-                                const original = JSON.stringify(json.enable_overhang_speed);
-                                json.enable_overhang_speed = json.enable_overhang_speed.map(() => "0");
-                                if (JSON.stringify(json.enable_overhang_speed) !== original) jsonModified = true;
-                            } else if (json.enable_overhang_speed !== "0") {
-                                json.enable_overhang_speed = "0";
-                                jsonModified = true;
-                            }
-                        }
+                // enable_overhang_speed: Slicer expects "0" or false.
+                // Replaces arrays like ["1", "1"] or comma-separated strings "1,1" with "0"
+                content = content.replace(/"enable_overhang_speed":\s*\[[^\]]+\]/g, '"enable_overhang_speed": "0"');
+                content = content.replace(/"enable_overhang_speed":\s*"[^"]+"/g, '"enable_overhang_speed": "0"');
 
-                        // Fix "ensure_vertical_shell_thickness"
-                        if (json.ensure_vertical_shell_thickness === "enabled") {
-                            json.ensure_vertical_shell_thickness = "ensure_all";
-                            jsonModified = true;
-                        }
+                // ensure_vertical_shell_thickness: Slicer expects "ensure_all"
+                content = content.replace(/"ensure_vertical_shell_thickness":\s*"enabled"/g, '"ensure_vertical_shell_thickness": "ensure_all"');
 
-                        // Fix "nozzle_type"
-                        if (json.nozzle_type) {
-                            if (Array.isArray(json.nozzle_type)) {
-                                const original = JSON.stringify(json.nozzle_type);
-                                json.nozzle_type = json.nozzle_type.map(t => t === "hardened_steel" ? "undefine" : t);
-                                if (JSON.stringify(json.nozzle_type) !== original) jsonModified = true;
-                            } else if (typeof json.nozzle_type === 'string' && json.nozzle_type.includes("hardened_steel")) {
-                                json.nozzle_type = json.nozzle_type.replace(/hardened_steel/g, 'undefine');
-                                jsonModified = true;
-                            }
-                        }
+                // nozzle_type: Slicer has issues with "hardened_steel" mapping. Replace with "undefine"
+                content = content.replace(/"nozzle_type":\s*\[[^\]]+\]/g, '"nozzle_type": "undefine"');
+                content = content.replace(/"nozzle_type":\s*"[^"]+"/g, '"nozzle_type": "undefine"');
 
-                        // Fix "raft_first_layer_expansion"
-                        if (json.raft_first_layer_expansion && parseInt(json.raft_first_layer_expansion) < 0) {
-                            json.raft_first_layer_expansion = "0";
-                            jsonModified = true;
-                        }
+                // raft_first_layer_expansion: clamp negative values to "0"
+                content = content.replace(/"raft_first_layer_expansion":\s*"-?[1-9]\d*"/g, '"raft_first_layer_expansion": "0"');
 
-                        // Fix "tree_support_wall_count"
-                        if (json.tree_support_wall_count && parseInt(json.tree_support_wall_count) < 0) {
-                            json.tree_support_wall_count = "0";
-                            jsonModified = true;
-                        }
-
-                        if (jsonModified) {
-                            content = JSON.stringify(json, null, 4);
-                        }
-                    } catch (e) {
-                        console.error("Failed to parse JSON config:", relativePath, e);
-                    }
-                }
+                // tree_support_wall_count: clamp negative values to "0"
+                content = content.replace(/"tree_support_wall_count":\s*"-?[1-9]\d*"/g, '"tree_support_wall_count": "0"');
 
                 // Clean up any empty lines created by regex replacements
                 content = content.replace(/^\s*$[\r\n]*/gm, '');
