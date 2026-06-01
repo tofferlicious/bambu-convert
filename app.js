@@ -52,19 +52,42 @@ document.addEventListener('DOMContentLoaded', () => {
         statusDiv.classList.remove('hidden');
     }
 
+    const logContainer = document.getElementById('log-container');
+    const logList = document.getElementById('log-list');
+
+    function logToUI(message) {
+        if (logContainer.classList.contains('hidden')) {
+            logContainer.classList.remove('hidden');
+        }
+        const li = document.createElement('li');
+        li.textContent = message;
+        logList.appendChild(li);
+        // auto scroll to bottom
+        logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    function clearLogs() {
+        logList.innerHTML = '';
+        logContainer.classList.add('hidden');
+    }
+
     // Convert Button Click
     convertBtn.addEventListener('click', async () => {
         if (!currentFile) return;
 
+        clearLogs();
         convertBtn.disabled = true;
         showStatus('Processing...', 'info');
+        logToUI(`Starting process for ${currentFile.name}...`);
 
         try {
             await process3MF(currentFile);
             showStatus('Conversion successful! Download started.', 'success');
+            logToUI('Repackaging complete. Download triggered.');
         } catch (error) {
             console.error(error);
             showStatus(`Error: ${error.message}`, 'error');
+            logToUI(`Error: ${error.message}`);
         } finally {
             convertBtn.disabled = false;
         }
@@ -146,8 +169,8 @@ document.addEventListener('DOMContentLoaded', () => {
                                 const original = JSON.stringify(json.nozzle_type);
                                 json.nozzle_type = json.nozzle_type.map(t => t === "hardened_steel" ? "undefine" : t);
                                 if (JSON.stringify(json.nozzle_type) !== original) jsonModified = true;
-                            } else if (json.nozzle_type === "hardened_steel") {
-                                json.nozzle_type = "undefine";
+                            } else if (typeof json.nozzle_type === 'string' && json.nozzle_type.includes("hardened_steel")) {
+                                json.nozzle_type = json.nozzle_type.replace(/hardened_steel/g, 'undefine');
                                 jsonModified = true;
                             }
                         }
@@ -178,6 +201,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // If content was modified, update the zip entry
                 if (content !== originalContent) {
                     console.log(`Modified ${relativePath} to remove Bambu/Orca specific tags.`);
+                    logToUI(`Patched configurations in: ${relativePath}`);
                     loadedZip.file(relativePath, content);
                 }
             }
